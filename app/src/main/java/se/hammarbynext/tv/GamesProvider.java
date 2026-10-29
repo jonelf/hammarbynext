@@ -27,7 +27,7 @@ public class GamesProvider extends ContentProvider {
 
     private static final String[] COLUMNS = {"top_line", "word", "start_ms", "end_ms", "colour", "calendar", "turn_seconds"};
     private static final int GREEN = 0xFF00A651;
-    private static final long STALE_MS = 30 * 60_000L;
+    private static final long STALE_MS = 2 * 60 * 60_000L;
     /** Minsta tid mellan två försök, så ett nät som ligger nere inte ger en hämtning per Home-tryck. */
     private static final long RETRY_MS = 5 * 60_000L;
 
@@ -44,6 +44,8 @@ public class GamesProvider extends ContentProvider {
 
     @Override
     public boolean onCreate() {
+        // Home frågar efter matchen när TV:n startat: ett bra tillfälle att se till att bevakningen går.
+        WatchService.ensure(getContext());
         return true;
     }
 

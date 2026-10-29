@@ -24,13 +24,14 @@ import java.util.concurrent.Executors;
 /**
  * Skärmsläckarens scen: Hammarbys och AIK:s nästa match i varsin ruta med lagets flagga, och domaren med
  * klockan och datumet på randig tröja. Rutorna studsar mot kanterna och mot varandra (Pitch); blixtar, kort och
- * mål ritas i EffectsView. Texten uppdateras varje hel minut och spelschemat hämtas var 30:e minut, bara medan
+ * mål ritas i EffectsView. Texten uppdateras varje hel minut och spelschemat hämtas varannan timme, bara medan
  * scenen syns. Delas av NextMatchDream (skärmsläckaren) och NextMatchActivity (rutan och kortet).
  */
 final class NextMatchScene implements Pitch.Listener {
 
     private static final ZoneId ZONE = ZoneId.of("Europe/Stockholm");
-    private static final long REFRESH_MS = 30 * 60_000L;
+    /** Schemat ändras sällan: varannan timme räcker. Vid start hämtas det om det sparade är äldre än en timme. */
+    private static final long REFRESH_MS = 2 * 60 * 60_000L;
     private static final long RETRY_MS = 2 * 60_000L;
 
     private static final String[] WEEKDAYS = {"måndag", "tisdag", "onsdag", "torsdag", "fredag", "lördag", "söndag"};

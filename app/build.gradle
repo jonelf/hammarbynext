@@ -32,4 +32,6 @@ android {
 
 dependencies {
     testImplementation 'junit:junit:4.13.2'
+    // Androids org.json är en tom stubbe i enhetstester: den riktiga för AlertsTest.
+    testImplementation 'org.json:json:20240303'
 }

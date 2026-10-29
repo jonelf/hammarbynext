@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- INTERNET: bara för att hämta Hammarbys spelschema från ESPN, och bara medan skärmsläckaren, appen eller
-     cleanyourtv:s Home syns. -->
+<!-- INTERNET: spelschemat från ESPN, vädret från Netatmo, och bevakningen av VMA och Polisen (se WatchService). -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Bevakningen (WatchService): notiser ovanpå andra appar, en förgrundstjänst och start vid uppstart. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
@@ -52,5 +56,21 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </service>
+
+        <!-- VMA och Polisens händelser i Stockholm, som notis ovanpå det som syns. -->
+        <service
+            android:name=".WatchService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Bevakar VMA och Polisens händelser och visar dem som notis på TV:n" />
+        </service>
+
+        <receiver android:name=".BootReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

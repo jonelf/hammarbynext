@@ -14,6 +14,7 @@ public class NextMatchActivity extends Activity {
         super.onCreate(state);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         scene = new NextMatchScene(this);
+        WatchService.ensure(this);
         setContentView(scene.view());
     }
 

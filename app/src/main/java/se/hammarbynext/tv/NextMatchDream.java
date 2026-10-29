@@ -14,6 +14,7 @@ public class NextMatchDream extends DreamService {
         setFullscreen(true);
         setScreenBright(false);
         scene = new NextMatchScene(this);
+        WatchService.ensure(this);
         setContentView(scene.view());
     }
 

@@ -1,0 +1,38 @@
+[
+ {
+  "id": 657737,
+  "datetime": "2026-10-29 8:04:15 +01:00",
+  "name": "29 oktober 00.21, Mordbrand, Stockholm",
+  "summary": "Larm om brand på Södermalm.",
+  "url": "/aktuellt/handelser/2026/oktober/29/29-oktober-00.21-mordbrand-stockholm/",
+  "type": "Mordbrand",
+  "location": {
+   "name": "Stockholms län",
+   "gps": "59.602496,18.138438"
+  }
+ },
+ {
+  "id": 657710,
+  "datetime": "2026-10-28 21:34:36 +01:00",
+  "name": "28 oktober 16.16, Bedrägeri, Stockholm",
+  "summary": "En äldre kvinna på Gärdet fattar misstankar och lämnar inte över sitt guld till en bedragare som kommit hem till henne.",
+  "url": "/aktuellt/handelser/2026/oktober/28/28-oktober-16.16-bedrageri-stockholm/",
+  "type": "Bedrägeri",
+  "location": {
+   "name": "Stockholms län",
+   "gps": "59.602496,18.138438"
+  }
+ },
+ {
+  "id": 657702,
+  "datetime": "2026-10-28 20:09:08 +01:00",
+  "name": "28 oktober 19.35, Mord/dråp, försök, Stockholm",
+  "summary": "Polisen griper två män efter bråk och våld i ett trapphus.",
+  "url": "/aktuellt/handelser/2026/oktober/28/28-oktober-19.35-morddrap-forsok-stockholm/",
+  "type": "Mord/dråp, försök",
+  "location": {
+   "name": "Stockholms län",
+   "gps": "59.602496,18.138438"
+  }
+ }
+]
