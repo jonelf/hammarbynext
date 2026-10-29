@@ -34,6 +34,10 @@ Det som händer när de möts:
 
 Allt rör sig hela tiden, så inget bränns in.
 
+![Skärmsläckaren: domaren med klockan, Hammarbys och AIK:s nästa match](shots/skarmslackare.jpg)
+
+![Domaren visar gult kort](shots/skarmslackare-gult-kort.jpg)
+
 ### Home-panelerna
 
 Två paneler under klockan på cleanyourtv:s Home:
@@ -43,6 +47,8 @@ Två paneler under klockan på cleanyourtv:s Home:
 - **Vädret, TORPET**, till höger om matchen: temperatur ute med trend, min/max, fukt, inne, regn i dag och vind
   från Netatmo-stationen. Den här panelen (`info_panel`) är en lokal ändring i launchern, `InfoPanel.java` i
   cleanyourtv, och finns inte uppströms. Väder äldre än två timmar visas inte.
+
+![Home med matchpanelen och vädret från torpet, Hammarby-appen i docken](shots/home.jpg)
 
 ### Bevakningen: VMA och Polisen
 
@@ -57,6 +63,8 @@ som syns:
 
 Varje händelse visas en gång. Notisen tar aldrig fokus, så fjärrkontrollen styr appen under som vanligt. VMA går
 före Polisen. Tjänsten startar när TV:n startar och när skärmsläckaren, appen eller Home-panelen används.
+
+![En notis från Polisen nere till höger, här ovanpå skärmsläckaren](shots/notis-polisen.jpg)
 
 ### Appen
 

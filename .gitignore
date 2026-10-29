@@ -6,7 +6,8 @@ app/build/
 local.properties
 *.apk
 .idea/
-shots/
+# Skärmdumpar: JPG (maskade, för README) committas; PNG är råa och kan visa privata saker.
+shots/*.png
 
 # Lokal anteckning om TV:ns tidigare skärmsläckare
 screensaver-before.txt
