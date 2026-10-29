@@ -1,0 +1,31 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'se.hammarbynext.tv'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'se.hammarbynext.tv'
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName '1.0'
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
+            // Sidladdas över ADB, som cleanyourtv:s launcher: signeras med debug-nyckeln.
+            signingConfig signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

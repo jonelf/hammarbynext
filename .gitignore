@@ -1,0 +1,12 @@
+.env
+__pycache__/
+.gradle/
+build/
+app/build/
+local.properties
+*.apk
+.idea/
+shots/
+
+# Lokal anteckning om TV:ns tidigare skärmsläckare
+screensaver-before.txt
