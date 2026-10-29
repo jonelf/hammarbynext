@@ -36,7 +36,7 @@ Allt rör sig hela tiden, så inget bränns in.
 
 ![Skärmsläckaren: domaren med klockan, Hammarbys och AIK:s nästa match](shots/skarmslackare.jpg)
 
-![Domaren visar gult kort](shots/skarmslackare-gult-kort.jpg)
+![Domaren visar gult kort medan AIK ramlar](shots/skarmslackare-gult-kort.jpg)
 
 ### Home-panelerna
 
@@ -64,7 +64,7 @@ som syns:
 Varje händelse visas en gång. Notisen tar aldrig fokus, så fjärrkontrollen styr appen under som vanligt. VMA går
 före Polisen. Tjänsten startar när TV:n startar och när skärmsläckaren, appen eller Home-panelen används.
 
-![En notis från Polisen nere till höger, här ovanpå skärmsläckaren](shots/notis-polisen.jpg)
+![En notis från Polisen nere till höger, ovanpå Home](shots/notis-polisen.jpg)
 
 ### Appen
 
