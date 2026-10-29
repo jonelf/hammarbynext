@@ -89,7 +89,7 @@ public class GamesProvider extends ContentProvider {
      */
     private Cursor weather() {
         MatrixCursor out = new MatrixCursor(INFO_COLUMNS);
-        out.setNotificationUri(getContext().getContentResolver(), NetatmoSource.INFO);
+        out.setNotificationUri(getContext().getContentResolver(), NetatmoSource.info());
         if (NetatmoSource.importCredentials(getContext())) weatherAttempt.set(0);   // nya nycklar: hämta direkt
         if (!NetatmoSource.configured(getContext())) return out;
 
@@ -99,7 +99,7 @@ public class GamesProvider extends ContentProvider {
         if (row != null && age < 2 * 60 * 60_000L) {
             out.addRow(new Object[] {row.topLine, row.headline, row.detail, SKY});
         }
-        if (age > WEATHER_STALE_MS) refreshWeather(now);
+        if (age > WEATHER_STALE_MS || row == null) refreshWeather(now);
         return out;
     }
 

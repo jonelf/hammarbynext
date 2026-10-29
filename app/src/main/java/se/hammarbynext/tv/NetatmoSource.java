@@ -32,13 +32,18 @@ import java.util.Locale;
  */
 final class NetatmoSource {
 
-    static final Uri INFO = Uri.parse("content://" + GamesProvider.AUTHORITY + "/info");
+    /** Väderpanelens adress hos GamesProvider. En metod, inte ett fält: Uri finns inte i enhetstesterna. */
+    static Uri info() {
+        return Uri.parse("content://" + GamesProvider.AUTHORITY + "/info");
+    }
 
     private static final String TOKEN_URL = "https://api.netatmo.com/oauth2/token";
     private static final String DATA_URL = "https://api.netatmo.com/api/getstationsdata?get_favorites=false";
     private static final String PREFS = "netatmo";
     private static final String IMPORT_FILE = "netatmo.json";
     private static final Locale SV = Locale.forLanguageTag("sv-SE");
+    /** Höjs när radens text ändras, så en sparad rad i gammalt format hämtas om direkt efter en uppdatering. */
+    private static final int ROW_VERSION = 2;
 
     /** Det Home visar: rubrikrad, stor rad och detaljrad. */
     static final class Row {
@@ -89,7 +94,7 @@ final class NetatmoSource {
     static Row load(Context ctx) {
         SharedPreferences p = prefs(ctx);
         String headline = p.getString("row_headline", null);
-        if (headline == null) return null;
+        if (headline == null || p.getInt("row_version", 1) != ROW_VERSION) return null;
         return new Row(p.getString("row_top", ""), headline, p.getString("row_detail", ""));
     }
 
@@ -109,8 +114,9 @@ final class NetatmoSource {
         Row row = parse(r.body);
         if (row == null) throw new IOException("Netatmo: ingen station i svaret");
         p.edit().putString("row_top", row.topLine).putString("row_headline", row.headline)
-                .putString("row_detail", row.detail).putLong("fetched", System.currentTimeMillis()).apply();
-        ctx.getContentResolver().notifyChange(INFO, null);
+                .putString("row_detail", row.detail).putInt("row_version", ROW_VERSION)
+                .putLong("fetched", System.currentTimeMillis()).apply();
+        ctx.getContentResolver().notifyChange(info(), null);
     }
 
     private static String refreshToken(Context ctx) throws IOException, JSONException {
@@ -145,7 +151,7 @@ final class NetatmoSource {
         }
     }
 
-    /** Ute: temperatur och trend stort; min/max, fukt, inne, regn i dag och vind på detaljraden. */
+    /** Ute: temperatur och trend stort; min/max, fukt ute och inne, inne, regn i dag och vind på detaljraden. */
     static Row parse(String json) throws JSONException {
         JSONArray devices = new JSONObject(json).getJSONObject("body").optJSONArray("devices");
         if (devices == null || devices.length() == 0) return null;
@@ -165,6 +171,8 @@ final class NetatmoSource {
             }
         }
 
+        Integer outHum = outdoor != null && outdoor.has("Humidity") ? outdoor.getInt("Humidity") : null;
+        Integer inHum = indoor != null && indoor.has("Humidity") ? indoor.getInt("Humidity") : null;
         List<String> detail = new ArrayList<>();
         String headline;
         if (outdoor != null && outdoor.has("Temperature")) {
@@ -172,9 +180,12 @@ final class NetatmoSource {
             if (outdoor.has("min_temp") && outdoor.has("max_temp")) {
                 detail.add("Min " + deg(outdoor.getDouble("min_temp")) + "  Max " + deg(outdoor.getDouble("max_temp")));
             }
-            if (outdoor.has("Humidity")) detail.add("Fukt " + outdoor.getInt("Humidity") + " %");
+            String hum = humidity(outHum, inHum);
+            if (hum != null) detail.add(hum);
         } else if (indoor != null && indoor.has("Temperature")) {
             headline = deg(indoor.getDouble("Temperature")) + " inne";   // ingen utomhusmodul
+            String hum = humidity(null, inHum);
+            if (hum != null) detail.add(hum);
             indoor = null;
         } else {
             return null;
@@ -187,6 +198,15 @@ final class NetatmoSource {
             detail.add(String.format(SV, "Vind %.0f m/s", wind.getDouble("WindStrength") / 3.6));
         }
         return new Row("Torpet", headline, String.join("  ·  ", detail));
+    }
+
+    /** "Fukt ute 97% inne 57%", eller bara den ena om den andra saknas. */
+    static String humidity(Integer out, Integer in) {
+        if (out == null && in == null) return null;
+        StringBuilder s = new StringBuilder("Fukt");
+        if (out != null) s.append(" ute ").append(out).append('%');
+        if (in != null) s.append(" inne ").append(in).append('%');
+        return s.toString();
     }
 
     private static String deg(double t) {

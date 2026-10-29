@@ -44,8 +44,10 @@ Två paneler under klockan på cleanyourtv:s Home:
 
 - **Matchen** ("HAMMARBY IF – IK SIRIUS", "Avspark om 6h 17m", sedan "Direkt nu") via launcherns `game_day`.
   Appen svarar på launcherns kontrakt med `GamesProvider`.
-- **Vädret, TORPET**, till höger om matchen: temperatur ute med trend, min/max, fukt, inne, regn i dag och vind
-  från Netatmo-stationen. Den här panelen (`info_panel`) är en lokal ändring i launchern, `InfoPanel.java` i
+- **Vädret, TORPET**, till höger om matchen, från Netatmo-stationen: temperatur ute med trend stort, och på
+  raden under min/max, fukt ute och inne, temperatur inne, regn i dag och vind, till exempel
+  "Min -0,1°  Max 10,5°  ·  Fukt ute 98% inne 67%  ·  Inne 12,5°  ·  Regn 0,1 mm". Saknas en modul hoppas
+  dess värden över. Den här panelen (`info_panel`) är en lokal ändring i launchern, `InfoPanel.java` i
   cleanyourtv, och finns inte uppströms. Väder äldre än två timmar visas inte.
 
 ![Home med matchpanelen och vädret från torpet, Hammarby-appen i docken](shots/home.jpg)
@@ -115,7 +117,8 @@ export JAVA_HOME=/Library/Java/JavaVirtualMachines/temurin-17.jdk/Contents/Home
   installera över den som finns, och launchern frågar om kortet igen.
 - **Docker:** `./docker-build.sh` bygger i cleanyourtv:s Docker-avbildning med samma nyckel, om Macen saknar SDK.
 - **Tester:** `PitchTest` kör skärmsläckarens fysik i tre timmar simulerad tid och provar mål och utvisning;
-  `AlertsTest` tolkar riktiga svar från VMA och Polisen (`app/src/test/resources/`).
+  `AlertsTest` tolkar riktiga svar från VMA och Polisen (`app/src/test/resources/`); `NetatmoSourceTest`
+  provar väderpanelens text.
 
 ## Installera
 
