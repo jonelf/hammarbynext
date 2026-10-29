@@ -58,9 +58,11 @@
         </service>
 
         <!-- VMA och Polisens händelser i Stockholm, som notis ovanpå det som syns. -->
+        <!-- Startbar från adb (testnotiserna i README), men inte av andra appar: DUMP har bara skalet och systemet. -->
         <service
             android:name=".WatchService"
-            android:exported="false"
+            android:exported="true"
+            android:permission="android.permission.DUMP"
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
