@@ -19,16 +19,31 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Hammarbys kommande matcher från ESPN:s öppna JSON-API, samma källa som api-sports.py.
+ * Hammarbys och AIK:s kommande matcher från ESPN:s öppna JSON-API, samma källa som api-sports.py.
  * Ingen nyckel behövs, men API:t är inofficiellt och kan ändras utan förvarning.
  * Senaste svaret sparas, så skärmsläckaren visar något direkt även utan nät.
  */
 final class MatchSource {
 
     private static final String SCHEDULE_URL =
-            "https://site.api.espn.com/apis/site/v2/sports/soccer/all/teams/2495/schedule?fixture=true";
+            "https://site.api.espn.com/apis/site/v2/sports/soccer/all/teams/%d/schedule?fixture=true";
     private static final int KEEP = 5;
-    private static final String PREFS = "matches";
+
+    /** ESPN:s lag-id, och var lagets senaste svar sparas. Hammarby behåller sitt gamla namn, "matches". */
+    enum Team {
+        HAMMARBY(2495, "matches"),
+        AIK(994, "matches_aik");
+
+        final int espnId;
+        final String prefs;
+
+        Team(int espnId, String prefs) {
+            this.espnId = espnId;
+            this.prefs = prefs;
+        }
+    }
+    /** En match räknas som pågående så här länge efter avspark, om sparad data inte vet bättre. */
+    static final long MATCH_MS = 2 * 60 * 60_000L;
 
     static final class Match {
         final long kickoffMs;
@@ -47,9 +62,14 @@ final class MatchSource {
 
     private MatchSource() {}
 
-    /** Hämtar spelschemat. Körs på en bakgrundstråd. */
     static List<Match> fetch() throws IOException, JSONException {
-        HttpURLConnection conn = (HttpURLConnection) new URL(SCHEDULE_URL).openConnection();
+        return fetch(Team.HAMMARBY);
+    }
+
+    /** Hämtar lagets spelschema. Körs på en bakgrundstråd. */
+    static List<Match> fetch(Team team) throws IOException, JSONException {
+        HttpURLConnection conn = (HttpURLConnection) new URL(
+                String.format(java.util.Locale.ROOT, SCHEDULE_URL, team.espnId)).openConnection();
         conn.setConnectTimeout(15_000);
         conn.setReadTimeout(15_000);
         conn.setRequestProperty("User-Agent", "hammarbynext/1.0");
@@ -102,6 +122,10 @@ final class MatchSource {
     }
 
     static void save(Context ctx, List<Match> matches, long now) {
+        save(ctx, Team.HAMMARBY, matches, now);
+    }
+
+    static void save(Context ctx, Team team, List<Match> matches, long now) {
         JSONArray arr = new JSONArray();
         try {
             for (Match m : matches) {
@@ -112,12 +136,28 @@ final class MatchSource {
         } catch (JSONException e) {
             return;
         }
-        prefs(ctx).edit().putString("list", arr.toString()).putLong("fetched", now).apply();
+        prefs(ctx, team).edit().putString("list", arr.toString()).putLong("fetched", now).apply();
+        // Home (cleanyourtv:s game_day-panel) läser Hammarby via GamesProvider: säg till att listan är ny.
+        if (team == Team.HAMMARBY) ctx.getContentResolver().notifyChange(GamesProvider.TURNS, null);
+    }
+
+    /** Matcher som inte är färdiga: pågående, eller med avspark högst MATCH_MS bak i tiden. */
+    static List<Match> upcoming(List<Match> matches, long nowMs) {
+        List<Match> out = new ArrayList<>();
+        if (matches == null) return out;
+        for (Match m : matches) {
+            if (nowMs < m.kickoffMs + MATCH_MS) out.add(m);
+        }
+        return out;
     }
 
     /** Senast sparade lista, eller null om inget hämtats än. */
     static List<Match> load(Context ctx) {
-        String s = prefs(ctx).getString("list", null);
+        return load(ctx, Team.HAMMARBY);
+    }
+
+    static List<Match> load(Context ctx, Team team) {
+        String s = prefs(ctx, team).getString("list", null);
         if (s == null) return null;
         List<Match> out = new ArrayList<>();
         try {
@@ -134,11 +174,15 @@ final class MatchSource {
     }
 
     static long fetchedAt(Context ctx) {
-        return prefs(ctx).getLong("fetched", 0L);
+        return fetchedAt(ctx, Team.HAMMARBY);
     }
 
-    private static SharedPreferences prefs(Context ctx) {
-        return ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+    static long fetchedAt(Context ctx, Team team) {
+        return prefs(ctx, team).getLong("fetched", 0L);
+    }
+
+    private static SharedPreferences prefs(Context ctx, Team team) {
+        return ctx.getSharedPreferences(team.prefs, Context.MODE_PRIVATE);
     }
 
     // InputStream.readAllBytes finns först från API 33.

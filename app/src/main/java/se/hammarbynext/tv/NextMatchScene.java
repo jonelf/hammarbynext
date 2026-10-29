@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Color;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.view.Choreographer;
 import android.view.View;
 import android.widget.FrameLayout;
@@ -12,51 +13,54 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Skärmsläckarens scen: flaggan studsar långsamt runt en svart skärm, som DVD-loggan, så inget bränns in.
- * Texten uppdateras varje hel minut och spelschemat hämtas var 30:e minut, bara medan scenen syns.
- * Delas av NextMatchDream (skärmsläckaren) och NextMatchActivity (rutan och kortet).
+ * Skärmsläckarens scen: Hammarbys och AIK:s nästa match i varsin ruta med lagets flagga, och domaren med
+ * klockan och datumet på randig tröja. Rutorna studsar mot kanterna och mot varandra (Pitch); blixtar, kort och
+ * mål ritas i EffectsView. Texten uppdateras varje hel minut och spelschemat hämtas var 30:e minut, bara medan
+ * scenen syns. Delas av NextMatchDream (skärmsläckaren) och NextMatchActivity (rutan och kortet).
  */
-final class NextMatchScene {
+final class NextMatchScene implements Pitch.Listener {
 
     private static final ZoneId ZONE = ZoneId.of("Europe/Stockholm");
     private static final long REFRESH_MS = 30 * 60_000L;
     private static final long RETRY_MS = 2 * 60_000L;
-    /** En match räknas som pågående så här länge efter avspark, om sparad data inte vet bättre. */
-    private static final long MATCH_MS = 2 * 60 * 60_000L;
-    /** Fart i andel av skärmbredden per sekund. */
-    private static final float SPEED = 0.02f;
 
     private static final String[] WEEKDAYS = {"måndag", "tisdag", "onsdag", "torsdag", "fredag", "lördag", "söndag"};
     private static final String[] MONTHS = {"januari", "februari", "mars", "april", "maj", "juni", "juli",
             "augusti", "september", "oktober", "november", "december"};
 
+    private static final int[] TEAM_ROLES = {CardView.LABEL, CardView.TITLE, CardView.BODY, CardView.INFO,
+            CardView.ACCENT};
+    private static final int[] REFEREE_ROLES = {CardView.CLOCK, CardView.DATE};
+
     private final Context ctx;
     private final FrameLayout root;
-    private final FlagCardView card;
+    private final CardView hammarby, aik, referee;
+    private final EffectsView effects;
+    private final Pitch pitch = new Pitch(new Random(), this);
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private final Random random = new Random();
 
     private ExecutorService network;
     private boolean running;
+    private final Map<MatchSource.Team, List<MatchSource.Match>> matches = new EnumMap<>(MatchSource.Team.class);
+    private final Map<MatchSource.Team, Boolean> failed = new EnumMap<>(MatchSource.Team.class);
     private boolean fetching;
-    private boolean fetchFailed;
-    private List<MatchSource.Match> matches;
-
-    private float x = -1, y, vx, vy;
     private long lastFrameNs;
+    private int sizedW, sizedH;
 
     private final Choreographer.FrameCallback frame = new Choreographer.FrameCallback() {
         @Override
         public void doFrame(long nowNs) {
             if (!running) return;
-            move(nowNs);
+            step(nowNs);
             Choreographer.getInstance().postFrameCallback(this);
         }
     };
@@ -76,10 +80,17 @@ final class NextMatchScene {
         this.ctx = ctx;
         root = new FrameLayout(ctx);
         root.setBackgroundColor(Color.BLACK);
-        card = new FlagCardView(ctx);
-        card.setAlpha(0f);
-        root.addView(card, new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT));
+        hammarby = new CardView(ctx, R.drawable.flag, 0xD0002A15, 0xFFFFCC00);
+        aik = new CardView(ctx, R.drawable.aik_flag, 0xD8000000, 0xFFFFE100);
+        referee = new CardView(ctx, 0, 0xCC000000, Color.WHITE);
+        for (CardView c : new CardView[] {hammarby, aik, referee}) {
+            c.setAlpha(0f);
+            root.addView(c, new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT));
+        }
+        effects = new EffectsView(ctx);
+        root.addView(effects, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
     }
 
     View view() {
@@ -90,22 +101,28 @@ final class NextMatchScene {
         if (running) return;
         running = true;
         network = Executors.newSingleThreadExecutor();
-        matches = MatchSource.load(ctx);
+        for (MatchSource.Team t : MatchSource.Team.values()) {
+            matches.put(t, MatchSource.load(ctx, t));
+            failed.put(t, false);
+        }
         handler.post(minute);
 
-        long age = System.currentTimeMillis() - MatchSource.fetchedAt(ctx);
+        long oldest = Math.min(MatchSource.fetchedAt(ctx, MatchSource.Team.HAMMARBY),
+                MatchSource.fetchedAt(ctx, MatchSource.Team.AIK));
+        long age = System.currentTimeMillis() - oldest;
         handler.postDelayed(refresh, age >= REFRESH_MS / 2 ? 0 : REFRESH_MS / 2 - age);
 
         lastFrameNs = 0;
         Choreographer.getInstance().postFrameCallback(frame);
-        card.animate().alpha(1f).setDuration(1200).start();
+        for (CardView c : new CardView[] {hammarby, aik, referee}) c.animate().alpha(1f).setDuration(1200).start();
     }
 
     void stop() {
         running = false;
         handler.removeCallbacksAndMessages(null);
         Choreographer.getInstance().removeFrameCallback(frame);
-        card.animate().cancel();
+        for (CardView c : new CardView[] {hammarby, aik, referee}) c.animate().cancel();
+        effects.clear();
         if (network != null) {
             network.shutdownNow();
             network = null;
@@ -115,29 +132,44 @@ final class NextMatchScene {
 
     // --- Rörelsen -------------------------------------------------------------------------------
 
-    private void move(long nowNs) {
-        int maxX = root.getWidth() - card.getWidth();
-        int maxY = root.getHeight() - card.getHeight();
-        if (card.getWidth() == 0 || maxX < 0 || maxY < 0) return;
-
-        if (x < 0) {   // första bildrutan: slumpad plats och riktning
-            x = random.nextFloat() * maxX;
-            y = random.nextFloat() * maxY;
-            float speed = root.getWidth() * SPEED;
-            vx = random.nextBoolean() ? speed : -speed;
-            vy = (random.nextBoolean() ? speed : -speed) * 0.75f;
+    private void step(long nowNs) {
+        int w = root.getWidth(), h = root.getHeight();
+        if (w == 0 || hammarby.getWidth() == 0) return;
+        if (w != sizedW || h != sizedH) {
+            pitch.setSize(w, h, hammarby.getWidth(), hammarby.getHeight());
+            sizedW = w;
+            sizedH = h;
         }
         float dt = lastFrameNs == 0 ? 0 : Math.min((nowNs - lastFrameNs) / 1e9f, 0.1f);
         lastFrameNs = nowNs;
+        long now = SystemClock.uptimeMillis();
+        pitch.step(dt, now);
+        sync(hammarby, pitch.body(Pitch.Role.HAMMARBY));
+        sync(aik, pitch.body(Pitch.Role.AIK));
+        sync(referee, pitch.body(Pitch.Role.REFEREE));
+        effects.tick(now);
+    }
 
-        x += vx * dt;
-        y += vy * dt;
-        if (x < 0) { x = 0; vx = Math.abs(vx); }
-        if (x > maxX) { x = maxX; vx = -Math.abs(vx); }
-        if (y < 0) { y = 0; vy = Math.abs(vy); }
-        if (y > maxY) { y = maxY; vy = -Math.abs(vy); }
-        card.setTranslationX(x);
-        card.setTranslationY(y);
+    private static void sync(CardView v, Pitch.Body b) {
+        v.setTranslationX(b.x);
+        v.setTranslationY(b.y);
+        v.setRotation(b.angle);
+        v.setVisibility(b.visible() ? View.VISIBLE : View.INVISIBLE);
+    }
+
+    @Override
+    public void onClash(float x, float y) {
+        effects.flash(x, y, SystemClock.uptimeMillis());
+    }
+
+    @Override
+    public void onCard(Pitch.Body team, Pitch.Body ref, boolean red) {
+        effects.card(ref, red, SystemClock.uptimeMillis());
+    }
+
+    @Override
+    public void onGoal(Pitch.Body team, float x, float y) {
+        effects.goal(team, x, y, SystemClock.uptimeMillis());
     }
 
     // --- Spelschemat ----------------------------------------------------------------------------
@@ -147,22 +179,26 @@ final class NextMatchScene {
         fetching = true;
         ExecutorService exec = network;
         exec.execute(() -> {
-            List<MatchSource.Match> result = null;
-            try {
-                result = MatchSource.fetch();
-                MatchSource.save(ctx, result, System.currentTimeMillis());
-            } catch (Exception e) {
-                // Inget nät, eller ESPN svarade konstigt: behåll det sparade och försök igen snart.
+            Map<MatchSource.Team, List<MatchSource.Match>> got = new EnumMap<>(MatchSource.Team.class);
+            for (MatchSource.Team t : MatchSource.Team.values()) {
+                try {
+                    List<MatchSource.Match> list = MatchSource.fetch(t);
+                    MatchSource.save(ctx, t, list, System.currentTimeMillis());
+                    got.put(t, list);
+                } catch (Exception e) {
+                    // Inget nät, eller ESPN svarade konstigt: behåll det sparade och försök igen snart.
+                }
             }
-            List<MatchSource.Match> fetched = result;
             handler.post(() -> {
                 if (!running || exec != network) return;
                 fetching = false;
-                fetchFailed = fetched == null;
-                if (fetched != null) matches = fetched;
+                for (MatchSource.Team t : MatchSource.Team.values()) {
+                    failed.put(t, !got.containsKey(t));
+                    if (got.containsKey(t)) matches.put(t, got.get(t));
+                }
                 updateText();
                 handler.removeCallbacks(refresh);
-                handler.postDelayed(refresh, fetched == null ? RETRY_MS : REFRESH_MS);
+                handler.postDelayed(refresh, got.size() < MatchSource.Team.values().length ? RETRY_MS : REFRESH_MS);
             });
         });
     }
@@ -175,38 +211,44 @@ final class NextMatchScene {
         String clock = String.format(Locale.ROOT, "%02d:%02d", now.getHour(), now.getMinute());
         String date = WEEKDAYS[now.getDayOfWeek().getValue() - 1] + " " + now.getDayOfMonth() + " "
                 + MONTHS[now.getMonthValue() - 1];
+        referee.setContent(new String[] {clock, date}, REFEREE_ROLES);
+        hammarby.setContent(teamLines(MatchSource.Team.HAMMARBY, now, nowMs), TEAM_ROLES);
+        aik.setContent(teamLines(MatchSource.Team.AIK, now, nowMs), TEAM_ROLES);
 
-        MatchSource.Match next = nextMatch(nowMs);
+        // Har en match precis tagit slut? Hämta om, så nästa match dyker upp.
+        for (MatchSource.Team t : MatchSource.Team.values()) {
+            MatchSource.Match next = nextMatch(t, nowMs);
+            if (next != null && nowMs > next.kickoffMs + MatchSource.MATCH_MS - 60_000L && !fetching) {
+                handler.post(refresh);
+                break;
+            }
+        }
+    }
+
+    private String[] teamLines(MatchSource.Team team, ZonedDateTime now, long nowMs) {
+        MatchSource.Match next = nextMatch(team, nowMs);
         if (next == null) {
             String msg, sub = "";
-            if (matches == null) {
-                msg = fetchFailed ? "Kunde inte hämta spelschemat" : "Hämtar spelschemat…";
-                if (fetchFailed) sub = "Försöker igen om en stund";
+            if (matches.get(team) == null) {
+                boolean f = Boolean.TRUE.equals(failed.get(team));
+                msg = f ? "Kunde inte hämta spelschemat" : "Hämtar spelschemat…";
+                if (f) sub = "Försöker igen om en stund";
             } else {
                 msg = "Inga kommande matcher";
                 sub = "Säsongen kan vara slut";
             }
-            card.setText(clock, date, msg, sub, "", "");
-            return;
+            return new String[] {"NÄSTA MATCH", msg, sub, "", ""};
         }
-
         ZonedDateTime kick = Instant.ofEpochMilli(next.kickoffMs).atZone(ZONE);
         String info = next.league;
         if (!next.venue.isEmpty()) info = info.isEmpty() ? next.venue : info + " · " + next.venue;
-        card.setText(clock, date, next.home + " – " + next.away, kickoffText(now.toLocalDate(), kick), info,
-                countdown(next, nowMs));
-
-        // Har matchen precis tagit slut? Hämta om, så nästa match dyker upp.
-        if (nowMs > next.kickoffMs + MATCH_MS - 60_000L && !fetching) handler.post(refresh);
+        return new String[] {"NÄSTA MATCH", next.home + " – " + next.away, kickoffText(now.toLocalDate(), kick),
+                info, countdown(next, nowMs)};
     }
 
-    /** Första matchen som inte är färdig: pågående, eller med avspark högst två timmar bak i tiden. */
-    private MatchSource.Match nextMatch(long nowMs) {
-        if (matches == null) return null;
-        for (MatchSource.Match m : matches) {
-            if (nowMs < m.kickoffMs + MATCH_MS) return m;
-        }
-        return null;
+    private MatchSource.Match nextMatch(MatchSource.Team team, long nowMs) {
+        List<MatchSource.Match> left = MatchSource.upcoming(matches.get(team), nowMs);
+        return left.isEmpty() ? null : left.get(0);
     }
 
     private static String kickoffText(LocalDate today, ZonedDateTime kick) {

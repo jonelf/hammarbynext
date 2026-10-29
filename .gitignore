@@ -10,3 +10,39 @@ shots/
 
 # Lokal anteckning om TV:ns tidigare skärmsläckare
 screensaver-before.txt
+
+# Hemligheter / miljö
+.env.*
+!.env.example
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# Editorer
+.vscode/
+*.iml
+*.swp
+*~
+
+# Python
+*.py[cod]
+.venv/
+venv/
+
+# Android / Gradle
+.externalNativeBuild/
+.cxx/
+captures/
+*.aab
+*.keystore
+*.jks
+
+# Loggar
+*.log

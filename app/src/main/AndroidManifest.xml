@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- INTERNET: bara för att hämta Hammarbys spelschema från ESPN, och bara medan skärmsläckaren eller kortet syns. -->
+<!-- INTERNET: bara för att hämta Hammarbys spelschema från ESPN, och bara medan skärmsläckaren, appen eller
+     cleanyourtv:s Home syns. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
@@ -13,6 +14,16 @@
         android:icon="@drawable/icon"
         android:label="@string/app_name"
         android:supportsRtl="false">
+
+        <!-- Nästa match under klockan på cleanyourtv:s Home, när game_day i launcherns config.xml är
+             se.hammarbynext.tv (kontraktet i cleanyourtv:s docs/modules.md). Läsbar för alla: bara det Home visar. -->
+        <meta-data android:name="com.gathin.tvhome.games" android:value="se.hammarbynext.tv.games" />
+        <!-- Vädret från Netatmo bredvid matchen, när info_panel i launcherns config.xml är se.hammarbynext.tv. -->
+        <meta-data android:name="com.gathin.tvhome.info" android:value="se.hammarbynext.tv.games" />
+        <provider
+            android:name=".GamesProvider"
+            android:authorities="se.hammarbynext.tv.games"
+            android:exported="true" />
 
         <!-- Rutan i app-listan och kortet på cleanyourtv:s Home (docs/modules.md): samma vy direkt, tills Back. -->
         <activity
