@@ -78,8 +78,3 @@ adb uninstall se.hammarbynext.tv
 ```
 
 Var den vald som skärmsläckare väljer du en annan i Inställningar.
-
-## Bilder
-
-Flaggan med Hammarbys emblem är klubbens varumärke. Den följer med för eget bruk. Lägger du ut projektet
-offentligt, kontrollera först att du får sprida bilden. Ikonen och bannern är ritade för appen, utan emblemet.
